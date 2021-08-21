@@ -45,11 +45,7 @@ class AuthController extends Controller
             return response()->json($validator->errors(), 422);
         }
  
-
-        $token = Auth::attempt($validator->validate());
-        return response($token);
-    
-        if (!$token = Auth::attempt($validator->validate())) {
+        if (!$token = Auth::guard('users')->attempt($validator->validate())) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
  
@@ -64,7 +60,7 @@ class AuthController extends Controller
      */
     public function me()
     {
-        return response()->json(auth()->user());
+        return response()->json(Auth::guard('users')->user());
     }
 
     /**
@@ -121,4 +117,13 @@ class AuthController extends Controller
             return response()->json(config('error.databaseTransactionRollback'));
         }
     }
+
+    protected function createNewToken($token){
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => auth('users')->factory()->getTTL() * 60
+        ]);
+    }
+
 }
