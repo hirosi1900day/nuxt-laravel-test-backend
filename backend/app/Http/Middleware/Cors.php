@@ -20,7 +20,7 @@ class Cors
         $response->withHeaders([
         'Access-Control-Allow-Origin' => 'http://localhost:3000',
         'Access-Control-Allow-Credentials' => true,
-        'Access-Control-Allow-Headers' => 'X-Requested-With, Origin, X-Csrftoken, Content-Type,  Accept' 
+        'Access-Control-Allow-Headers' => '*' 
         ]);
         return $response;
     }

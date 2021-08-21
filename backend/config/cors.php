@@ -17,16 +17,16 @@ return [
 
     'paths' => ['api/*'],
 
-    // 'allowed_methods' => ['*'],
+    'allowed_methods' => ['*'],
 
-   
-    'allowed_origins' => [   
+
+     'allowed_origins' => [   
         'http://localhost:3000'
     ],
 
     'allowed_origins_patterns' => [],
 
-    'allowed_headers' => ['X-Requested-With, Origin, X-Csrftoken, Content-Type,  Accept' ],
+    'allowed_headers' => ['*'],
 
     'exposed_headers' => [],
 
