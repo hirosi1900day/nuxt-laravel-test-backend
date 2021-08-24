@@ -24,15 +24,15 @@ class Registervalidate extends FormRequest
     public function rules()
     {
         return [
-            'email' => 'required|unique:users|max:255|email',
+            'email_token' => 'required|unique',
             'password' => 'required|confirmed|min:8',
         ];
     }
 
     public function messages() {
         return [
-            'email.required' => 'メールアドレスが必要です',
-            'email.unique' => '登録されているメールアドレスです',
+            'email.required' => 'トークンが設定されていません',
+            'email.unique' => 'すでに登録されています',
             'password.required' => 'パスワードは必須です',
             'password.min:8' => '最低8文字以上で入力してくだい'
         ];

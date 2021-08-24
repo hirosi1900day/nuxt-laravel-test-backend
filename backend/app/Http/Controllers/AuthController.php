@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\TemporaryRegister;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\Registervalidate;
 use App\Http\Requests\Loginvalidate;
@@ -15,6 +16,11 @@ use SebastianBergmann\Type\FalseType;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Validator;
+use App\Services\Auth\LoginServices;
+use Exception;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\TemporaryRegisterMail;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -25,7 +31,7 @@ class AuthController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('auth:api', ['except' => ['login', 'register']]);
+        $this->middleware('auth:users', ['except' => ['login', 'register','temporaryRegister']]);
     }
 
     /**
@@ -40,17 +46,7 @@ class AuthController extends Controller
             'password' => 'required|string|min:6',
         ]);
  
-       
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
- 
-        if (!$token = Auth::guard('users')->attempt($validator->validate())) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
- 
-        
-        return $this->createNewToken($token);
+        return LoginServices::login($validator, 'users');
     }
 
     /**
@@ -92,20 +88,15 @@ class AuthController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    protected function respondWithToken($token)
-    {
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => 5000000 * 60
-        ]);
-    }
 
     public function register(RegisterValidate $request) {    
+        
+       
         DB::beginTransaction();
         try {
+            $email = TemporaryRegister::where('status', false)->where('token', $request->email_token)->first()['email'];
             $user = User::create([
-                'email' => $request['email'],
+                'email' => $email,
                 'password' => Hash::make($request['password'])  
             ]);
             DB::commit();
@@ -114,16 +105,31 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             DB::rollback();
             Log::error('WEB /user/verify - Class ' . get_class() . ' - PDOException Error. Rollback was executed.' . $e->getMessage());
-            return response()->json(config('error.databaseTransactionRollback'));
+            return response($e->getMessage);
         }
     }
 
-    protected function createNewToken($token){
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => auth('users')->factory()->getTTL() * 60
-        ]);
-    }
+    public function temporaryRegister(Request $request) {
+        
+        // return response($validator);
 
+        // if ($validator->fails()) {
+        //     return response()->json($validator->errors(), 422);
+        // }
+
+        DB::beginTransaction();
+        try{
+            $token =  Str::random(20);
+            TemporaryRegister::create([
+                'email' => $request->email,
+                'token' => $token
+            ]);
+            Mail::to($request)->send(new TemporaryRegisterMail($token));
+            DB::commit();
+            return response('メール送信に成功しました', 201);
+        } catch(Exception $e){
+            DB::rollBack();
+            return response('メール送信に失敗しました', 401);
+        }
+    }
 }

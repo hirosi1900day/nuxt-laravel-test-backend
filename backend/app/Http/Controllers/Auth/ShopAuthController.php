@@ -1,14 +1,23 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\User;
+use App\Models\ShopUser;
 use Illuminate\Support\Facades\Auth;
-use App\Http\Requests\Uservalidate;
+use App\Http\Requests\Registervalidate;
+use App\Http\Requests\Loginvalidate;
+use Illuminate\Auth\Events\Validated;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use SebastianBergmann\Type\FalseType;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Facades\Validator;
 
-class AuthController extends Controller
+
+class ShopAuthController extends Controller
 {
     /**
      * Create a new AuthController instance.
@@ -17,7 +26,7 @@ class AuthController extends Controller
      */
     public function __construct()
     {
-        $this->middleware('auth:api', ['except' => ['login']]);
+        $this->middleware('auth:shopUsers', ['except' => ['login', 'register']]);
     }
 
     /**
@@ -25,14 +34,24 @@ class AuthController extends Controller
      *
      * @return \Illuminate\Http\JsonResponse
      */
-    public function login()
-    {
-        $credentials = request(['email', 'password']);
-
-        if (! $token = Auth::attempt($credentials)) {
+   
+    public function login(Request $request){
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required|string|min:6',
+        ]);
+ 
+       
+        if ($validator->fails()) {
+            return response()->json($validator->errors(), 422);
+        }
+ 
+        if (!$token = Auth::guard('shopUsers')->attempt($validator->validate())) {
             return response()->json(['error' => 'Unauthorized'], 401);
         }
-        return $this->respondWithToken($token);
+ 
+        
+        return $this->createNewToken($token);
     }
 
     /**
@@ -42,7 +61,7 @@ class AuthController extends Controller
      */
     public function me()
     {
-        return response()->json(auth()->user());
+        return response()->json(Auth::guard('shopUsers')->user());
     }
 
     /**
@@ -52,7 +71,7 @@ class AuthController extends Controller
      */
     public function logout()
     {
-        Auth::logout();
+        Auth::guard('shopUser')->logout();
 
         return response()->json(['message' => 'Successfully logged out']);
     }
@@ -64,7 +83,7 @@ class AuthController extends Controller
      */
     public function refresh()
     {
-        return $this->respondWithToken(Auth::refresh());
+        return $this->respondWithToken(Auth::guard('shopUser')->refresh());
     }
 
     /**
@@ -83,20 +102,31 @@ class AuthController extends Controller
         ]);
     }
 
-    public function register(UserValidate $request) {
+    public function register(RegisterValidate $request) {    
+
+        
         DB::beginTransaction();
         try {
-            $user = new User;
-            $user->user_name = $request->user_name;
-            $user->email = $request->email;
-            $user->password = $request->password;
-            $user->save();
+            $user = ShopUser::create([
+                'email' => $request['email'],
+                'password' => Hash::make($request['password'])  
+            ]);
             DB::commit();
-            return response()->json(config('mail.message.add_user_success'),201);
+            // $this->login($user);
+            return response($user, 201);
         } catch (\Exception $e) {
             DB::rollback();
             Log::error('WEB /user/verify - Class ' . get_class() . ' - PDOException Error. Rollback was executed.' . $e->getMessage());
             return response()->json(config('error.databaseTransactionRollback'));
         }
     }
+
+    protected function createNewToken($token){
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => auth('users')->factory()->getTTL() * 60
+        ]);
+    }
+
 }

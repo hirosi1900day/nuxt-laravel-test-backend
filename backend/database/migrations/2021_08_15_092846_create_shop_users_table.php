@@ -15,11 +15,11 @@ class CreateShopUsersTable extends Migration
     {
         Schema::create('shop_users', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name')->default('');
             $table->string('email')->unique();
             $table->string('image_name')->nullable();
-            $table->string('title');
-            $table->string('content');
+            $table->string('title')->default('');
+            $table->string('content')->default('');
             $table->string('detail')->nullable();
             $table->string('shop_location_prefecture')->nullable();
             $table->string('area')->nullable();

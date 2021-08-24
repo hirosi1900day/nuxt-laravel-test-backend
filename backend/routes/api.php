@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Auth\ShopAuthController;
+
 /*
 |--------------------------------------------------------------------------
 | API Routes
@@ -20,21 +21,25 @@ use App\Http\Controllers\Auth\ShopAuthController;
 //     return $request->user();
 // });
 Route::middleware(['cors'])->group(function () {
+    
+    //user側
     Route::get('test1', [TestController::class, 'test1']);
     Route::post('login', [AuthController::class, 'login'])->name('login');
-    Route::post('logout', [AuthController::class, 'logout']);
-    Route::get('me', [AuthController::class, 'me']);
-   
-    Route::prefix('user')->group(function(){   
-        Route::post('register', [AuthController::class, 'register']);
-        Route::post('refresh', [AuthController::class, 'refresh']);
+    Route::post('user/register', [AuthController::class, 'register']);
+    Route::post('user/temporary/register', [AuthController::class, 'temporaryRegister']);
+    
+    //shop側
+    Route::post('shop/login', [ShopAuthController::class, 'login'])->name('login');
+    Route::post('shop/register', [ShopAuthController::class, 'register']);
        
-    });
+    // Route::prefix('users')->group(function(){   
+    //     Route::get('me', [AuthController::class, 'me']);
+    // }); 
 });
 
-Route::prefix('shop')->group(function(){   
-    Route::post('login', [ShopAuthController::class, 'login'])->name('login');
-    Route::post('logout', [ShopAuthController::class, 'logout']);
-    Route::post('refresh', [ShopAuthController::class, 'refresh']);
-    Route::get('me', [ShopAuthController::class, 'me']);
-});
+// Route::prefix('shop')->group(function(){   
+//     Route::post('login', [ShopAuthController::class, 'login'])->name('login');
+//     Route::post('logout', [ShopAuthController::class, 'logout']);
+//     Route::post('refresh', [ShopAuthController::class, 'refresh']);
+//     Route::get('me', [ShopAuthController::class, 'me']);
+// });
